@@ -62,14 +62,6 @@ loom {
             }
         }
     }
-    // Configures the mixins if we are building for forge, useful for when we are dealing with cross-platform projects.
-    if (project.platform.isForge) {
-        forge {
-            mixinConfig("mixins.${mod_id}.json")
-        }
-    }
-    // Configures the name of the mixin "refmap" using an experimental loom api.
-    mixin.defaultRefmapName.set("mixins.${mod_id}.refmap.json")
 }
 
 // Creates the shade/shadow configuration, so we can include libraries inside our mod, rather than having to add them separately.
@@ -126,18 +118,6 @@ tasks {
         inputs.property("java_level", compatLevel)
         inputs.property("version", mod_version)
         inputs.property("mcVersionStr", project.platform.mcVersionStr)
-        filesMatching(listOf("mcmod.info", "mixins.${mod_id}.json", "mods.toml")) {
-            expand(
-                mapOf(
-                    "id" to mod_id,
-                    "name" to mod_name,
-                    "java" to java,
-                    "java_level" to compatLevel,
-                    "version" to mod_version,
-                    "mcVersionStr" to project.platform.mcVersionStr
-                )
-            )
-        }
         filesMatching("fabric.mod.json") {
             expand(
                 mapOf(
@@ -186,7 +166,6 @@ tasks {
                 "ModSide" to "CLIENT", // We aren't developing a server-side mod, so this is fine.
                 "ForceLoadAsMod" to true, // We want to load this jar as a mod, so we force Forge to do so.
                 "TweakOrder" to "0", // Makes sure that the OneConfig launch wrapper is loaded as soon as possible.
-                "MixinConfigs" to "mixins.${mod_id}.json", // We want to use our mixin configuration, so we specify it here.
                 "TweakClass" to "cc.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker" // Loads the OneConfig launch wrapper.
             )
         }
