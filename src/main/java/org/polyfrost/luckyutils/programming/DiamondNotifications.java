@@ -14,7 +14,8 @@ import org.polyfrost.luckyutils.config.DiamondTimerConfig;
 
 import java.util.Arrays;
 import java.util.LinkedList;
-
+import java.util.Map;
+import java.util.HashMap;
 
 public class DiamondNotifications {
 
@@ -38,7 +39,7 @@ public class DiamondNotifications {
         return formattedTime;
     }    //https://stackoverflow.com/questions/22545644/how-to-convert-seconds-into-hhmmss
 
-    private final LinkedList<Integer>  diamondDrops = new LinkedList<>(Arrays.asList(210, 360, 518, 676, 834, 990, 1080, 1160, 1240, 1320, 1400, 1480, 1560, 1640,
+    private LinkedList<Integer>  diamondDrops = new LinkedList<>(Arrays.asList(200, 360, 520, 680, 830, 990, 1080, 1160, 1240, 1320, 1400, 1480, 1560, 1640,
             1720, 1800, 1880, 1960, 2040, 2120, 2200, 2280, 2360, 2440, 2520, 2600, 2680, 2760, 2840, 2920, 3000));
     private static int ticks = 0;
     private static int seconds = 0;
@@ -50,79 +51,115 @@ public class DiamondNotifications {
     public DiamondNotifications(DiamondTimerConfig config) {
         EventManager.INSTANCE.register(this);
         DiamondNotifications.config = config;
-    }
-    private String cleanChatMessage(String text) {
-        if (text.startsWith("<")) {
-            text = text.substring(2).trim();
-        }
-        return text;
+        DiamondNotifications.config.hud.setText(formatSeconds(0));
     }
 
     @Subscribe
     private void onChatSend(ChatSendEvent event) {
-        if (DiamondNotifications.config.enabled) {
-            String text = event.message;
-            if (text.equals("/l") || text.equals("/lobby") || text.equals("/l b") || text.equals("/zoo")) {
-                inGame = false;
-                ticks = 0;
-                seconds = 0;
-                config.hud.setText(formatSeconds(0));
-            }
+        if (!DiamondNotifications.config.enabled) {
+            return;
+        }
+        String text = event.message;
+        if (text.equals("/l") || text.equals("/l b") || text.equals("/zoo")) {
+            inGame = false;
+            ticks = 0;
+            seconds = 0;
+            diamondDrops = new LinkedList<>(Arrays.asList(200, 360, 520, 680, 830, 990, 1080, 1160, 1240, 1320, 1400, 1480, 1560, 1640,
+                    1720, 1800, 1880, 1960, 2040, 2120, 2200, 2280, 2360, 2440, 2520, 2600, 2680, 2760, 2840, 2920, 3000));
+            DiamondNotifications.config.hud.setText(formatSeconds(0));
+        }
+        if (text.equals("/rejoin")) {
+            inGame = true;
         }
     }
 
     @Subscribe
     private void onChatReceive(ChatReceiveEvent event) {
-        if(DiamondNotifications.config.enabled) {
-            String text = cleanChatMessage(event.message.getUnformattedTextForChat());
-            if (text.equals("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬")) {
-                if (seconds < 5) {
-                    inGame = true;
-                    DiamondNotifications.config.hud.setText(formatSeconds(diamondDrops.getFirst() - seconds));
-                } else {
-                    inGame = false;
-                    ticks = 0;
-                    seconds = 0;
-                    DiamondNotifications.config.hud.setText(formatSeconds(0));
-                }
-            }
+        if (!DiamondNotifications.config.enabled) {
+            return;
         }
+        if (event.message.getUnformattedText().equals("                       Bed Wars Lucky Blocks")) {
+            inGame = true;
+            DiamondNotifications.config.hud.setText(formatSeconds(diamondDrops.getFirst() - seconds));
+        }
+        if (event.message.getUnformattedText().equals("                            Reward Summary")
+                || event.message.getUnformattedText().equals("                         Slumber Items Gained")) {
+            inGame = false;
+            ticks = 0;
+            seconds = 0;
+            diamondDrops = new LinkedList<>(Arrays.asList(200, 360, 520, 680, 830, 990, 1080, 1160, 1240, 1320, 1400, 1480, 1560, 1640,
+                    1720, 1800, 1880, 1960, 2040, 2120, 2200, 2280, 2360, 2440, 2520, 2600, 2680, 2760, 2840, 2920, 3000));
+            DiamondNotifications.config.hud.setText(formatSeconds(0));
+            return;
+        }
+        if (seconds != 0) {
+            return;
+        }
+
+//        //le chat gpt
+//        Map<String, Integer> messageToSeconds = new HashMap<String, Integer>() {{
+//            put("Diamond Generators have been upgraded to Tier II", 360);
+//            put("Emerald Generators have been upgraded to Tier II", 720);
+//            put("Diamond Generators have been upgraded to Tier III", 1080);
+//            put("Emerald Generators have been upgraded to Tier III", 1440);
+//            put("All beds have been destroyed!", 1800);
+//            put("SUDDEN DEATH:", 2400);
+//        }};
+//
+//        String message = event.message.getUnformattedText();
+//        for (String key : messageToSeconds.keySet()) {
+//            if (message.startsWith(key)) {
+//                seconds = messageToSeconds.get(key);
+//                inGame = true;
+//                break;
+//            }
+//        }
+//        //le chat gpt
     }
 
     @Subscribe
     private void onTick(TickEvent event) {
-        if (DiamondNotifications.config.enabled && inGame && event.stage == Stage.START && !diamondDrops.isEmpty()) {
-            if (ticks != 20) {
-                ticks++;
-            } else {
-                seconds++;
-                ticks = 0;
-                if (diamondDrops.getFirst() - seconds == 30) {
-                    if (DiamondNotifications.config.notificationLocation == 0) {
-                        UChat.actionBar("§bDiamond Blocks drop in 30 seconds!");
-                    } else if (DiamondNotifications.config.notificationLocation == 1){
-                        UChat.chat("§bDiamond Blocks drop in 30 seconds!");
-                    }
-                } else if (diamondDrops.getFirst() == seconds) {
-                    if (DiamondNotifications.config.notificationLocation == 0) {
-                        UChat.actionBar("§bDiamond Blocks dropped!");
-                    } else if (DiamondNotifications.config.notificationLocation == 1){
-                        UChat.chat("§bDiamond Blocks dropped!");
-                    }
-                    if (DiamondNotifications.config.notificationSound) {
-                        Minecraft.getMinecraft().thePlayer.playSound("random.orb", .25f,.5f);
-                    }
-                    if (!diamondDrops.isEmpty()) {
-                        diamondDrops.removeFirst();
-                    } else {
-                        DiamondNotifications.config.hud.setText("No Next");
+        if (!DiamondNotifications.config.enabled || !inGame || event.stage != Stage.START || diamondDrops.isEmpty()) {
+            return;
+        }
 
-                    }
-                }
-                DiamondNotifications.config.hud.setText(formatSeconds(diamondDrops.getFirst() - seconds));
+        if (ticks % 20 != 0) {
+            ticks++;
+            return;
+        }
+        seconds++;
+        ticks = 0;
+
+        int dropTimeDifference = diamondDrops.getFirst() - seconds;
+        if (dropTimeDifference == 30) {
+            notifyDiamondBlocks("Diamond Blocks drop in 30 seconds!");
+        }
+        if (dropTimeDifference == 0) {
+            notifyDiamondBlocks("Diamond Blocks dropped!");
+            if (DiamondNotifications.config.notificationSound) {
+                Minecraft.getMinecraft().thePlayer.playSound("random.orb", 0.25f, 0.5f);
             }
+            handleDiamondDrops();
+        }
+        DiamondNotifications.config.hud.setText(formatSeconds(diamondDrops.getFirst() - seconds));
+    }
+
+    private void notifyDiamondBlocks(String message) {
+        if (DiamondNotifications.config.notificationLocation == 0) {
+            UChat.actionBar("§b" + message);
+        } else if (DiamondNotifications.config.notificationLocation == 1) {
+            UChat.chat("§b" + message);
         }
     }
+
+    private void handleDiamondDrops() {
+        if (!diamondDrops.isEmpty()) {
+            diamondDrops.removeFirst();
+        } else {
+            DiamondNotifications.config.hud.setText("No Next");
+        }
+    }
+
     @Command(value = "resetdiamond", description = "Resets the game state manually if something goes wrong.")
     public static class Reset {
         @Main

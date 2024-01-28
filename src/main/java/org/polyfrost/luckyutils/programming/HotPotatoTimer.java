@@ -13,7 +13,7 @@ import org.polyfrost.luckyutils.config.HotPotatoConfig;
 
 public class HotPotatoTimer {
     private static int ticks = 0;
-    private static int seconds = 15;
+    private static int seconds = 14;
     boolean inGame = false;
     static boolean havePotato = false;
 
@@ -24,67 +24,37 @@ public class HotPotatoTimer {
         HotPotatoTimer.config = config;
         HotPotatoTimer.config.hud.setText("No Potato");
     }
-    private String cleanChatMessage(String text) {
-        if (text.startsWith("<")) {
-            text = text.substring(2).trim();
-        }
-        return text;
-    }
 
     @Subscribe
     private void onChatSend(ChatSendEvent event) {
-        if (HotPotatoTimer.config.enabled) {
-            String text = event.message;
-            if (text.equals("/l") || text.equals("/lobby") || text.equals("/l b") || text.equals("/zoo")) {
-                inGame = false;
-                ticks = 0;
-                seconds = 0;
-                config.hud.setText(String.valueOf(0));
-            }
+        if (!HotPotatoTimer.config.enabled) {
+            return;
+        }
+        String text = event.message;
+        if (text.equals("/l") || text.equals("/l b") || text.equals("/zoo")) {
+            inGame = false;
+            ticks = 0;
+            seconds = 0;
+            HotPotatoTimer.config.hud.setText("No Potato");
+        }
+        if (text.equals("/rejoin")) {
+            inGame = true;
         }
     }
     @Subscribe
     private void onChatReceive(ChatReceiveEvent event) {
-        String text = cleanChatMessage(event.message.getUnformattedTextForChat());
-        if (text.equals("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬")) {
-            if (seconds == 15) {
-                inGame = true;
-            } else {
-                inGame = false;
-            }
+        if (!HotPotatoTimer.config.enabled) {
+            return;
         }
-        switch (text) {
-            case "You have the hot potato! Quickly punch someone to pass it on!":
-                startPotatoClock();
-                break;
-            case "The Hot Potato exploded!":
-                resetPotatoClock();
-                break;
-            case "Du har den varme kartoffel! Skynd dig at slå nogen for at videresende den!":
-                startPotatoClock();
-                break;
-            case "Den varme kartoffel eksploderede!":
-                resetPotatoClock();
-                break;
-            case "Du besitzt die heiße Kartoffel! Schlage schnell jemand anderes, um sie weiterzugeben!":
-                startPotatoClock();
-                break;
-            case "Die heiße Kartoffel ist explodiert!":
-                resetPotatoClock();
-                break;
-            case "¡Tienes la Patata Caliente! ¡Golpea rápidamente a alguien para pasársela!":
-                startPotatoClock();
-                break;
-            case "¡La Patata Caliente explotó!":
-                resetPotatoClock();
-                break;
-            case "Você está com a batata quente! Bata rapidamente em alguém para a passar!":
-                startPotatoClock();
-                break;
-            case "A batata quente explodiu!":
-                resetPotatoClock();
-                break;
+        if (event.message.getUnformattedText().equals("                       Bed Wars Lucky Blocks")) {
+            inGame = true;
+            return;
         }
+        if (event.message.getUnformattedText().equals("                            Reward Summary")
+                || event.message.getUnformattedText().equals("                         Slumber Items Gained")) {
+            inGame = false;
+        }
+
     }
 
     private static void startPotatoClock() {
@@ -94,34 +64,35 @@ public class HotPotatoTimer {
 
     private static void resetPotatoClock() {
         havePotato = false;
-        seconds = 15;
+        seconds = 14;
         ticks = 0;
         HotPotatoTimer.config.hud.setText("No Potato");
     }
 
     @Subscribe
     private void onTick(TickEvent event) {
-        if (Minecraft.getMinecraft().isIntegratedServerRunning() && HotPotatoTimer.config.enabled && event.stage == Stage.START && inGame) {
-            ItemStack slotOne = Minecraft.getMinecraft().thePlayer.inventory.mainInventory[0];
-            if(slotOne == null || !slotOne.getDisplayName().equals("Hot Potato")) {
-                resetPotatoClock();
-            }
-            if(havePotato) {
-                if (ticks != 20) {
-                    ticks++;
-                } else {
-                    seconds--;
-                    ticks = 0;
-                    HotPotatoTimer.config.hud.setText(String.valueOf(seconds));
-                    if (seconds == 3) {
-                        Minecraft.getMinecraft().thePlayer.playSound("random.orb", .4f,.3f);
-                    } else if (seconds == 2) {
-                        Minecraft.getMinecraft().thePlayer.playSound("random.orb", .3f,.1f);
-                    } else if (seconds == 1) {
-                        Minecraft.getMinecraft().thePlayer.playSound("random.orb", .25f,.01f);
-                    } else if (seconds == 0) {
-                        resetPotatoClock();
-                    }
+        if (!HotPotatoTimer.config.enabled || !inGame || event.stage != Stage.START) {
+            return;
+        }
+        ItemStack slotOne = Minecraft.getMinecraft().thePlayer.inventory.mainInventory[0];
+        if (slotOne == null || !slotOne.getDisplayName().equals("§bHot Potato")) {
+            resetPotatoClock();
+        }
+        if (slotOne != null && slotOne.getDisplayName().equals("§bHot Potato")) {
+            if (ticks != 20) {
+                ticks++;
+            } else {
+                seconds--;
+                ticks = 0;
+                HotPotatoTimer.config.hud.setText(String.valueOf(seconds));
+                if (seconds == 3) {
+                    Minecraft.getMinecraft().thePlayer.playSound("random.orb", .4f, .3f);
+                } else if (seconds == 2) {
+                    Minecraft.getMinecraft().thePlayer.playSound("random.orb", .3f, .1f);
+                } else if (seconds == 1) {
+                    Minecraft.getMinecraft().thePlayer.playSound("random.orb", .25f, .01f);
+                } else if (seconds == 0) {
+                    resetPotatoClock();
                 }
             }
         }

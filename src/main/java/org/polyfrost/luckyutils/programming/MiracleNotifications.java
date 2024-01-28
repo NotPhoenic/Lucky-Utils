@@ -13,7 +13,9 @@ import net.minecraft.client.Minecraft;
 import org.polyfrost.luckyutils.config.MiracleTimerConfig;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 
 public class MiracleNotifications {
 
@@ -37,7 +39,7 @@ public class MiracleNotifications {
         return formattedTime;
     }    //https://stackoverflow.com/questions/22545644/how-to-convert-seconds-into-hhmmss
 
-    private final LinkedList<Integer> miracleDrops =  new LinkedList<>(Arrays.asList(458, 720, 1070, 1410, 1430, 1918, 2386, 2631));
+    private static LinkedList<Integer> miracleDrops = new LinkedList<>(Arrays.asList(458, 720, 1070, 1410, 1430, 1918, 2386, 2631));
     private static int ticks = 0;
     private static int seconds = 0;
 
@@ -49,77 +51,109 @@ public class MiracleNotifications {
     public MiracleNotifications(MiracleTimerConfig config) {
         EventManager.INSTANCE.register(this);
         MiracleNotifications.config = config;
+        MiracleNotifications.config.hud.setText(formatSeconds(0));
+
     }
-    private String cleanChatMessage(String text) {
-        if (text.startsWith("<")) {
-            text = text.substring(2).trim();
+    @Subscribe
+    private void onChatSend(ChatSendEvent event) {
+        if (!MiracleNotifications.config.enabled) {
+            return;
         }
-        return text;
+        String text = event.message;
+        if (text.equals("/l") || text.equals("/l b") || text.equals("/zoo")) {
+            inGame = false;
+            ticks = 0;
+            seconds = 0;
+            miracleDrops = new LinkedList<>(Arrays.asList(458, 720, 1070, 1410, 1430, 1918, 2386, 2631));
+            MiracleNotifications.config.hud.setText(formatSeconds(0));
+        }
+        if (text.equals("/rejoin")) {
+            inGame = true;
+        }
     }
 
     @Subscribe
-    private void onChatSend(ChatSendEvent event) {
-        if (MiracleNotifications.config.enabled) {
-            String text = event.message;
-            if (text.equals("/l") || text.equals("/lobby") || text.equals("/l b") || text.equals("/zoo")) {
-                inGame = false;
-                ticks = 0;
-                seconds = 0;
-                config.hud.setText(formatSeconds(0));
-            }
-        }
-    }
-    @Subscribe
     private void onChatReceive(ChatReceiveEvent event) {
-        if(MiracleNotifications.config.enabled) {
-            String text = cleanChatMessage(event.message.getUnformattedTextForChat());
-            if (text.equals("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬")) {
-                if (seconds < 5) {
-                    inGame = true;
-                    MiracleNotifications.config.hud.setText(formatSeconds(miracleDrops.getFirst() - seconds));
-                } else {
+        if (!MiracleNotifications.config.enabled) {
+            return;
+        }
+
+        if (event.message.getUnformattedText().equals("                       Bed Wars Lucky Blocks")) {
+            if (seconds < 5) {
+                inGame = true;
+                MiracleNotifications.config.hud.setText(formatSeconds(miracleDrops.getFirst() - seconds));
+                if (event.message.getUnformattedText().equals("                            Reward Summary")
+                        || event.message.getUnformattedText().equals("                         Slumber Items Gained")) {
                     inGame = false;
                     ticks = 0;
                     seconds = 0;
-                    config.hud.setText(formatSeconds(0));
+                    MiracleNotifications.config.hud.setText(formatSeconds(0));
+                    miracleDrops = new LinkedList<>(Arrays.asList(458, 720, 1070, 1410, 1430, 1918, 2386, 2631));
                 }
             }
         }
+//        //le chat gpt
+//        Map<String, Integer> messageToSeconds = new HashMap<String, Integer>() {{
+//            put("Diamond Generators have been upgraded to Tier II", 360);
+//            put("Emerald Generators have been upgraded to Tier II", 720);
+//            put("Diamond Generators have been upgraded to Tier III", 1080);
+//            put("Emerald Generators have been upgraded to Tier III", 1440);
+//            put("All beds have been destroyed!", 1800);
+//            put("SUDDEN DEATH:", 2400);
+//        }};
+//
+//        String message = event.message.getUnformattedText();
+//        for (String key : messageToSeconds.keySet()) {
+//            if (message.startsWith(key)) {
+//                seconds = messageToSeconds.get(key);
+//                inGame = true;
+//                break;
+//            }
+//        }
+//        //le chat gpt
     }
     @Subscribe
     private void onTick(TickEvent event) {
-        if (config.enabled && inGame && event.stage == Stage.START && !miracleDrops.isEmpty()) {
-            if (ticks != 20) {
-                ticks++;
-            } else {
-                seconds++;
-                ticks = 0;
-                if (miracleDrops.getFirst() - seconds == 30) {
-                    if (MiracleNotifications.config.notificationLocation == 0) {
-                        UChat.actionBar("§cMiracle Blocks drop in 30 seconds!");
-                    } else if (MiracleNotifications.config.notificationLocation == 1){
-                        UChat.chat("§cMiracle Blocks drop in 30 seconds!");
-                    }
-                } else if (miracleDrops.getFirst() == seconds) {
-                    if (MiracleNotifications.config.notificationLocation == 0) {
-                        UChat.actionBar("§cMiracle Blocks dropped!");
-                    } else if (MiracleNotifications.config.notificationLocation == 1){
-                        UChat.chat("§cMiracle Blocks dropped!");
-                    }
-                    if (MiracleNotifications.config.notificationSound) {
-                        Minecraft.getMinecraft().thePlayer.playSound("random.orb", .25f,.5f);
-                    }
-                    if (!miracleDrops.isEmpty()) {
-                        miracleDrops.removeFirst();
-                    } else {
-                        MiracleNotifications.config.hud.setText("No Next");
-                    }
-                }
-                MiracleNotifications.config.hud.setText(formatSeconds(miracleDrops.getFirst() - seconds));
+        if (!config.enabled || !inGame || event.stage != Stage.START || miracleDrops.isEmpty()) {
+            return;
+        }
+        if (ticks != 20) {
+            ticks++;
+            return;
+        }
+        seconds++;
+        ticks = 0;
 
+        int dropTimeDifference = miracleDrops.getFirst() - seconds;
+
+        if (dropTimeDifference == 30) {
+            notifyMiracleBlocks("Miracle Blocks drop in 30 seconds!");
+        }
+        if (dropTimeDifference == 0) {
+            notifyMiracleBlocks("Miracle Blocks dropped!");
+            if (MiracleNotifications.config.notificationSound) {
+                Minecraft.getMinecraft().thePlayer.playSound("random.orb", 0.25f, 0.5f);
             }
+            emptySafetyCheck();
+        }
+        MiracleNotifications.config.hud.setText(formatSeconds(miracleDrops.getFirst() - seconds));
+    }
+    private void notifyMiracleBlocks(String message) {
+        if (MiracleNotifications.config.notificationLocation == 0) {
+            UChat.actionBar("§c" + message);
+        } else if (MiracleNotifications.config.notificationLocation == 1) {
+            UChat.chat("§c" + message);
         }
     }
+
+    private void emptySafetyCheck() {
+        if (!miracleDrops.isEmpty()) {
+            miracleDrops.removeFirst();
+        } else {
+            MiracleNotifications.config.hud.setText("No Next");
+        }
+    }
+
     @Command(value = "resetmiracle", description = "Resets the game state manually if something goes wrong.")
     public static class Reset {
         @Main
@@ -128,6 +162,7 @@ public class MiracleNotifications {
             ticks = 0;
             seconds = 0;
             MiracleNotifications.config.hud.setText(formatSeconds(0));
+            miracleDrops = new LinkedList<>(Arrays.asList(458, 720, 1070, 1410, 1430, 1918, 2386, 2631));
         }
     }
 }

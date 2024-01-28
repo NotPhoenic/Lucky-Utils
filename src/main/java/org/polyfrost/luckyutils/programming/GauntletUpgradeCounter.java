@@ -30,60 +30,74 @@ public class GauntletUpgradeCounter {
         GauntletUpgradeCounter.config = config;
         GauntletUpgradeCounter.config.hud.setText("0");
     }
-    private String cleanChatMessage(String text) {
-        if (text.startsWith("<")) {
-            text = text.substring(2).trim();
-        }
-        return text;
-    }
 
     @Subscribe
     private void onChatSend(ChatSendEvent event) {
-        if (GauntletUpgradeCounter.config.enabled) {
-            String text = event.message;
-            if (text.equals("/l") || text.equals("/lobby") || text.equals("/l b") || text.equals("/zoo")) {
-                inGame = false;
-                ticks = 0;
-                seconds = 0;
-                config.hud.setText(String.valueOf(0));
-            }
+        if (!GauntletUpgradeCounter.config.enabled) {
+            return;
+        }
+        String text = event.message;
+        if (text.equals("/l") || text.equals("/l b") || text.equals("/zoo")) {
+            inGame = false;
+            ticks = 0;
+            seconds = 0;
+            upgrades = 0;
+            GauntletUpgradeCounter.config.hud.setText("0");
+        }
+        if (text.equals("/rejoin")) {
+            inGame = true;
+            GauntletUpgradeCounter.config.hud.setText("0");
         }
     }
     @Subscribe
     private void onChatReceive(ChatReceiveEvent event) {
-        if(GauntletUpgradeCounter.config.enabled) {
-            String text = cleanChatMessage(event.message.getUnformattedTextForChat());
-            if (text.equals("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬")) {
-                if (seconds < 5) {
-                    inGame = true;
-                } else {
-                    inGame = false;
-                    ticks = 0;
-                    seconds = 0;
-                    GauntletUpgradeCounter.config.hud.setText(String.valueOf(0));
+        if (!GauntletUpgradeCounter.config.enabled) {
+            return;
+        }
+        if (event.message.getUnformattedText().equals("                       Bed Wars Lucky Blocks")) {
+            inGame = true;
+            ticks = 0;
+            seconds = 0;
+            GauntletUpgradeCounter.config.hud.setText("0");
+            return;
+        }
+        if (event.message.getUnformattedText().equals("                            Reward Summary")
+                || event.message.getUnformattedText().equals("                         Slumber Items Gained")) {
+            inGame = false;
+            ticks = 0;
+            seconds = 0;
+            upgrades = 0;
+            GauntletUpgradeCounter.config.hud.setText("0");
+            return;
+        }
+        String engOne = "You have received a gauntlet upgrade! Your punches are now more lethal!";
+        String engMany = "You have received another gauntlet upgrade! Your punches are now even more lethal!";
+        String dnOne = "Du har modtaget en håndopgradering! Dine slag er nu mere dødbringende!";
+        String dnMany = "Du har modtaget en anden håndopgradering! Dine slag er nu endnu mere dødbringende!";
+        String geOne = "Du hast ein Gauntlet Upgrade erhalten! Deine Schläge sind nun tödlicher!";
+        String geMany = "Du hast noch ein Gauntlet Upgrade erhalten! Deine Schläge sind nun noch tödlicher!";
+        String esOne = "¡Has recibido una mejora de puños, tus golpes son más letales ahora!";
+        String esMany = "¡Has recibido otra mejora de puños, tus golpes son aún más letales ahora!";
+        String brOne = "Você recebeu uma melhoria de soco! Seus ataques serão mais letais!";
+        String brMany = "Você recebeu outra melhoria de soco! Seus ataques serão ainda mais letais!";
+        String[] gauntlets = {engOne, engMany, dnOne, dnMany, geOne, geMany, esOne, esMany, brOne, brMany};
+        if (Arrays.asList(gauntlets).contains(event.message.getUnformattedText())) {
+            upgrades++;
+            GauntletUpgradeCounter.config.hud.setText(String.valueOf(upgrades));
+            if (GauntletUpgradeCounter.config.notificationLocation == 0) {
+                UChat.actionBar(gauntletMessage());
+            } else if (GauntletUpgradeCounter.config.notificationLocation == 1) {
+                UChat.chat(gauntletMessage());
+            }
+        }
 
-                }
-            }
-            String engOne = "You have received a gauntlet upgrade! Your punches are now more lethal!";
-            String engMany = "You have received another gauntlet upgrade! Your punches are now even more lethal!";
-            String dnOne = "Du har modtaget en håndopgradering! Dine slag er nu mere dødbringende!";
-            String dnMany = "Du har modtaget en anden håndopgradering! Dine slag er nu endnu mere dødbringende!";
-            String geOne = "Du hast ein Gauntlet Upgrade erhalten! Deine Schläge sind nun tödlicher!";
-            String geMany = "Du hast noch ein Gauntlet Upgrade erhalten! Deine Schläge sind nun noch tödlicher!";
-            String esOne = "¡Has recibido una mejora de puños, tus golpes son más letales ahora!";
-            String esMany = "¡Has recibido otra mejora de puños, tus golpes son aún más letales ahora!";
-            String brOne = "Você recebeu uma melhoria de soco! Seus ataques serão mais letais!";
-            String brMany = "Você recebeu outra melhoria de soco! Seus ataques serão ainda mais letais!";
-            String[] gauntlets = {engOne, engMany, dnOne, dnMany, geOne, geMany, esOne, esMany, brOne, brMany};
-            if (Arrays.asList(gauntlets).contains(text)) {
-                upgrades++;
-                GauntletUpgradeCounter.config.hud.setText(String.valueOf(upgrades));
-                if (GauntletUpgradeCounter.config.notificationLocation == 0) {
-                    UChat.actionBar("§6You have §b" + upgrades + " §6Gauntlet Upgrades");
-                } else if (GauntletUpgradeCounter.config.notificationLocation == 1) {
-                    UChat.chat("§6You have §b" + upgrades + " §6Gauntlet Upgrades");
-                }
-            }
+    }
+
+    private String gauntletMessage() {
+        if (upgrades == 1) {
+            return ("§6You have §b" + upgrades + " §6Gauntlet Upgrade"); // widepeepoHappy
+        } else {
+            return ("§6You have §b" + upgrades + " §6Gauntlet Upgrades");
         }
     }
 
